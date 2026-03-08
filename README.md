@@ -11,6 +11,7 @@ This project is protected by the **Creative Commons BY-NC-SA 4.0** license.
 
 A calculator in few lines!
 moving buttons with mouse.
+Note: this code uses simpleeval
 ```
 import customtkinter as ctk
 import pypower, time
