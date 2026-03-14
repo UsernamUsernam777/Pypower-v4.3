@@ -311,11 +311,12 @@ class GUI:
             if bg:
                 inf = _ctk.CTkLabel(widget.master, text=information, font=(font, size), fg_color=bg)
             else:
-                inf = _ctk.CTkLabel(widget.master, text=information, font=(font, size), fg_color=None)
+                inf = _ctk.CTkLabel(widget.master, text=information, font=(font, size), fg_color='transparent')
+            inf.lift()
             def show(e):
                 x = widget.winfo_x()
                 y = widget.winfo_y()
-                inf.after(1000, lambda: inf.place(x=x, y=y+widget.winfo_height()))
+                inf.after(500, lambda: inf.place(x=x, y=y+widget.winfo_height()))
                 inf.after(hide_after*1000, inf.place_forget)
             widget.bind('<Enter>', show)
         def mouse_wheel_num(entry, end, step=1):
