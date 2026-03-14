@@ -1,4 +1,5 @@
 import _datetime
+import ast as _ast
 import customtkinter as _ctk
 import pyperclip as _pyperclip
 import time as _time
@@ -89,6 +90,13 @@ class Apps:
         Other.in_bg('create app loading ...', 1, mainloop)
 class Files:
     @staticmethod
+    def read_write_txt_file(file_txt, do='read', text=None):
+        if do == 'read':
+            with open(file_txt, 'r', encoding='utf-8') as f:
+                return f.read().strip()
+        else:
+            with open(file_txt, 'w', encoding='utf-8') as f:
+                f.write(text or '')
     def make_if_not_exists(path, type=''):
         """Create a folder (type='') or empty file at path if it doesn't exist."""
         if not _os.path.exists(path):
@@ -100,25 +108,38 @@ class Files:
     def append_to_pypower(path, class_name, code):
         """Append a labeled code block to pypower.py."""
         Files.append_to_file(path, f'\n#{class_name}\n'+code)
-    def append_to_file(path, text):
-        """Append text to a file, removing double blank lines."""
+    def append_to_file(path, text, side='bottom'):
+        """Append text to a file removing double blank lines."""
         with open(path, 'r', encoding='utf-8') as a:
             old_text = a.read()
         with open(path, 'w', encoding='utf-8') as b:
-            new_text = old_text + '\n' + text
+            if side == 'top':
+                new_text = text + '\n' + old_text
+            else:
+                new_text = old_text + '\n' + text
             b.write(new_text.replace('\n\n', '\n'))
 class GUI:
     @staticmethod
     class CustomTk:
-        def translate_app(master, src, to):
-            from deep_translator import GoogleTranslator
-            tr = GoogleTranslator(source=src, target=to)
-            for i in GUI.CustomTk.all_objects(master):
+        def add_texts_to_file(master, file, sep='\n'):
+            Files.make_if_not_exists(file, 'txt')
+            Files.read_write_txt_file(file, 'write', '')
+            for i in GUI.CustomTk.has_text(GUI.CustomTk.all_objects(master), return_dic_widget_texts=True)['texts']:
+                Files.append_to_file(file, i+sep)
+        def has_text(iterable, with_empty=False, return_dic_widget_texts=False):
+            result = []
+            for i in iterable:
                 try:
-                    translated = tr.translate(i.cget('text'))
-                    i.configure(text=translated)
+                    if not with_empty:
+                        if i.cget('text').strip():
+                            result.append(i)
+                    else:
+                        result.append(i)
                 except:
                     pass
+            if return_dic_widget_texts:
+                return {'texts': [i.cget('text') for i in result], 'widgets': result}
+            return result
         def double_clk_copy_label(label):
             def co(e):
                 _pyperclip.copy(label.cget('text'))
@@ -272,19 +293,18 @@ class GUI:
             result = []
             for i in master.winfo_children():
                 if isinstance(i, (_ctk.CTkFrame, _ctk.CTkScrollableFrame)):
-                    result.extend(all_objects(i))
+                    result.extend(GUI.CustomTk.all_objects(i))
                 else:
                     result.append(i)
             return result
-        def edit_all_widgets_texts(master, font='arial', size=20, text_color='lightblue', bg=''):
+        def edit_all_widgets_texts(iterable, font='arial', size=20, text_color='lightblue', bg='', with_empty=False):
             """Apply font, text color, and background to all child widgets in master."""
             def m():
-                for i in master.winfo_children():
-                        if isinstance(i, (_ctk.CTkLabel, _ctk.CTkButton)):
-                            if bg:
-                                i.configure(font=(font, size), text_color=text_color, fg_color=bg)
-                            else:
-                                i.configure(font=(font, size), text_color=text_color, fg_color='transparent')
+                for i in GUI.CustomTk.has_text(iterable, with_empty=with_empty):
+                    if bg:
+                        i.configure(font=(font, size), text_color=text_color, fg_color=bg)    
+                    else:
+                        i.configure(font=(font, size), text_color=text_color, fg_color='transparent')
             Other.in_bg('edit_all_texts', 0.5, m)
         def info(widget, information, font='arial', size=20, bg='', hide_after=5):
             """Show a tooltip label below widget on hover, auto-hide after hide_after seconds."""
@@ -387,21 +407,6 @@ class Iterable:
                 if str(search_with) in str(o):
                     result.append(o)
         return result
-    def any_is_class(iterable, clas, type=list, first_obj_only=True):
-        """
-    Check for objects of a specific class in an iterable.
-
-    Returns the first match if first_object_only is True (default). 
-    Otherwise, returns a set of all matches for O(1) membership testing.
-    """
-        result = []
-        for i in iterable:
-            if isinstance(i, clas):
-                if first_obj_only:
-                    return i
-                else:
-                    result.append(i)
-        return type(result) if result else []
     def numred(iterable):
         """numred the objects in an iterable ex: if you want to create numred tasks
             numred(['visiting my uncle', 'water the plants'])  1.visiting my uncle"""
@@ -422,10 +427,7 @@ result = ['Olivia', 'mark']"""
         return co
     def all_in(main_iterable, iterable):
         """Checks if all unique elements of 'iterable' exist within 'main_iterable'."""
-        for i in set(iterable):
-            if i not in main_iterable:
-                return False
-        return True
+        return set(iterable).issubset(set(main_iterable))
     class Dict:
         def swap_dict(dic):
             """k: v ➡ v, k"""
@@ -435,12 +437,12 @@ result = ['Olivia', 'mark']"""
                     v = str(v)
                 result[v] = k
             return result
-    def return_dict_in_lines(dec):
+        def return_dict_in_lines(dec):
         """Return a dict formatted as 'key: value' lines."""
-        result = ''
-        for i in dec:
-            result += f"{i}: {dec[i]}\n"
-        return result.strip()
+            result = ''
+            for i in dec:
+                result += f"{i}: {dec[i]}\n"
+            return result.strip()
 class Math:
     @staticmethod
     def int_or_float(num):
