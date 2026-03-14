@@ -440,7 +440,7 @@ result = ['Olivia', 'mark']"""
                 result[v] = k
             return result
         def return_dict_in_lines(dec):
-        """Return a dict formatted as 'key: value' lines."""
+            """Return a dict formatted as 'key: value' lines."""
             result = ''
             for i in dec:
                 result += f"{i}: {dec[i]}\n"
