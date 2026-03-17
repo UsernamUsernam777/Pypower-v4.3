@@ -24,9 +24,11 @@ class Time:
         t2 = Time.reverse_many_hms(time_str2)
         return Time.how_many_hms_in_s(abs(t1-t2))
     """convert time to type_output"""
+    @staticmethod
     def convert_to_iterable_and_int(time_str, type_output=tuple):
         """Convert 'HH:MM:SS' string to an iterable of ints. ex: '01:30:45' -> (1, 30, 45)"""
         return type_output(map(int, time_str.split(':')))
+    @staticmethod
     def how_many_hms_in_s(sec):
         """how many hours, minutes and seconds in seconds"""
         hours = sec // 3600
@@ -109,9 +111,11 @@ class Files:
             else:
                 with open(path, 'w', encoding='utf-8') as f:
                     pass
+    @staticmethod
     def append_to_pypower(path, class_name, code):
         """Append a labeled code block to pypower.py."""
         Files.append_to_file(path, f'\n#{class_name}\n'+code)
+    @staticmethod
     def append_to_file(path, text, side='bottom'):
         """Append text to a file removing double blank lines."""
         old_text = Files.read_write_txt_file(path)
@@ -124,14 +128,47 @@ class Files:
 class GUI:
     @staticmethod
     class CustomTk:
-        def duplicate_double_click(obj):
-            new = GUI.CustomTk.clone_widget(obj)
+        def sort_colors(widgets, per_row_color):
+            b = 0
+            colors = set([w.cget('fg_color') for w in widgets])
+            wids = []
+            for i in colors:
+                new = []
+                for o in widgets:
+                    if o.cget('fg_color') == i:
+                        new.append(o)
+                wids.append(new)
+            for i in wids:
+                GUI.CustomTk.tidy_up(i, per_row_color, start_column=b)
+                b += per_row_color
+        def table(master, dic_data, font=('arial', 30), text_color='black', return_widgets_frame=False):
+            a = _ctk.CTkScrollableFrame(master)
+            b = 0
+            if return_widgets_frame:
+                allss = []
+            for i in dic_data:
+                alls = []
+                alls.append(_ctk.CTkLabel(a, text=i, font=font, text_color=text_color))
+                for o in dic_data[i]:
+                    alls.append(_ctk.CTkLabel(a, text=str(o), font=font, text_color=text_color))
+                GUI.CustomTk.tidy_up(alls, 1, start_column=b)
+                b += 1
+                if return_widgets_frame:
+                    allss.append(alls)
+            if return_widgets_frame:
+                return {'widgets':allss, 'frame': a}
+            return a
+        def duplicate_double_click(obj, move=False):
             def alls(e):
+                new = GUI.CustomTk.clone_widget(obj)
+                new.lift()
+                if move:
+                    GUI.CustomTk.move(new)
                 obj.after(300, lambda:new.place(x=obj.winfo_x(), y=obj.winfo_y()+obj.winfo_height()))
-                duplicate(new)
+                GUI.CustomTk.duplicate_double_click(new)
             obj.bind('<Double-Button-1>', alls)
-        def clone_widget(old_widget):
-            new = old_widget.__class__(old_widget.master)
+        def clone_widget(old_widget, master=None):
+            new = old_widget.__class__(master or old_widget.master)
             attr = old_widget.__dict__
             for i in attr:
                 try:
@@ -242,9 +279,10 @@ class GUI:
                         self.duration -= 1
                         self.obj.configure(text=Time.how_many_hms_in_s(self.duration))
                         _time.sleep(1)
-                        if self.when_finish and self.duration == 0:
+                        if self.duration == 0:
+                            if self.when_finish:
+                                self.when_finish()
                             self.button.configure(text=self.start_icon)
-                            self.when_finish()
                             break
                 Other.in_bg(f'{id(self.obj)}', 0, m)
             def stop(self):
@@ -278,7 +316,7 @@ class GUI:
                 mouse_x = master.winfo_pointerx() - master.winfo_rootx() - width//2
                 mouse_y = master.winfo_pointery() - master.winfo_rooty() - height//2
                 obj.place(x=mouse_x, y=mouse_y)
-                if action_when_move:
+                if action_when_move:    
                     action_when_move()
             obj.bind('<B1-Motion>', m)
         def good_size(widgets):
