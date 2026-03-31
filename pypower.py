@@ -34,18 +34,10 @@ class Other:
         """Open a new browser tab with a Google search for text."""
         _webbrowser.open_new_tab(f"https://www.google.com/search?q={text}&oq=&gs_lcrp=EgZjaHJvbWUqCQgAECMYJxjqAjIJCAAQIxgnGOoCMgkIARAjGCcY6gIyCQgCEEUYOxjCAzIRCAMQABgDGEIYjwEYtAIY6gIyDwgEEC4YAxiPARi0AhjqAjIRCAUQABgDGEIYjwEYtAIY6gIyEQgGEAAYAxhCGI8BGLQCGOoCMg8IBxAuGAMYjwEYtAIY6gLSAQg0MDVqMGoxNagCCLACAfEF1j7Fc7lEloM&sourceid=chrome&ie=UTF-8")
     @staticmethod
-    def in_bg(name, duration, action=None):
-        """Run action in a background thread after duration seconds.
-don't write repeated name."""
-        import threading as _threading
-        names = [i.name for i in _threading.enumerate()]
-        if name not in names:
-            def v():
-                _time.sleep(duration)
-                if action:
-                    action()
-            a = _threading.Thread(name=name, target=v, daemon=True)
-            a.start()
+    def in_bg(duration, action=None):
+        """Run action in a background thread after duration seconds."""
+        t = _ctk.CTk()
+        t.after(duration*1000, action)
 class Apps:
     @staticmethod
     def create_app(path, icon=None, move_to_folder=None):
@@ -78,7 +70,7 @@ class Apps:
                     else:
                         new = path.replace('.py', '.exe')
                     print(f"App Created Successed in {new}")
-        Other.in_bg('create app loading ...', 1, mainloop)
+        Other.in_bg(1, mainloop)
 class Files:
     @staticmethod
     def read_write_txt_file(file_txt, do='read', text=None, create_if_no=False):
@@ -310,12 +302,10 @@ class GUI:
             return a
         def change_mode(master, light_icon='light', dark_icon='dark'):
             def c():
-                if _ctk.get_appearance_mode() == 'Dark':
-                    _ctk.set_appearance_mode('Light')
-                    button.configure(text=dark_icon)
-                else:
-                    _ctk.set_appearance_mode('Dark')
-                    button.configure(text=light_icon)
+                icons = [dark_icon, light_icon]
+                modes = ['Light', 'Dark']
+                _ctk.set_appearance_mode(Iterable.opponents(modes, _ctk.get_appearance_mode()))
+                button.configure(text=Iterable.opponents(icons, button.cget('text')))
             button = _ctk.CTkButton(master, text=dark_icon, command=c, font=('arial', 30))
             return button
         def limit_len(entry, limit):
@@ -346,8 +336,6 @@ class GUI:
             if return_dic_frame_and_buttons:
                 return {'frame': result, 'buttons': buttons}
             return result
-        def console_num(master, per_row=3, entry_to_insert=None, font=('arial', 20), text_color='white'):
-            return GUI.CustomTk.console(master, range(10), per_row, entry_to_insert, font=font, text_color=text_color)
         class Timer:
             def __init__(self, duration, obj, start_icon='start', stop_icon='stop', when_finish=None):
                 self.duration = duration
@@ -359,18 +347,17 @@ class GUI:
                 self.timers = 0
                 self.when_finish = when_finish
             def start(self):
-                self.button.configure(command=self.stop, text=self.stop_icon)
-                def m():
-                    while self.resume:
-                        self.duration -= 1
-                        self.obj.configure(text=Time.how_many_hms_in_s(self.duration))
-                        _time.sleep(1)
-                        if self.duration == 0:
-                            if self.when_finish:
-                                self.when_finish()
-                            self.button.configure(text=self.start_icon)
-                            break
-                Other.in_bg(f'{id(self.obj)}', 0, m)
+                if self.resume and self.duration > 0:
+                    self.button.configure(command=self.stop, text=self.stop_icon)
+                    self.duration -= 1
+                    self.obj.configure(text=Time.how_many_hms_in_s(self.duration))
+                    
+                    if self.duration == 0:
+                        if self.when_finish:
+                            self.when_finish()
+                            self.button.configure(text=self.start_icon, command=self.start)
+                    else:
+                        self.obj.after(1000, self.start)
             def stop(self):
                 self.button.configure(command=self.resume_timer, text=self.start_icon)
                 self.resume = False
@@ -415,9 +402,16 @@ class GUI:
                 for i in widgets:
                     i.configure(width=max(width), height=max(height))
             widgets[0].after(100, m)
-        def sort_colors(widgets, per_row_color, start_col=0, color_of='fg_color'):
+        def sort_colors(widgets, per_row_color, start_col=0, start_row=0, color_of='fg_color', orientation='vertical'):
             sc = start_col
-            colors = set([w.cget(color_of) for w in widgets])
+            sr = start_row
+            colors = set()
+            for i in widgets:
+                v = i.cget(color_of)
+                if isinstance(v, list):
+                    colors.add(v[0])
+                else:
+                    colors.add(v)
             wids = []
             for i in colors:
                 new = []
@@ -426,8 +420,11 @@ class GUI:
                         new.append(o)
                 wids.append(new)
             for i in wids:
-               GUI.CustomTk.tidy_up(i, per_row_color, start_row=0, start_column=sc)
-               sc += per_row_color
+                GUI.CustomTk.tidy_up(i, per_row_color, start_row=sr, start_column=sc)
+                if orientation == 'vertical':
+                    sc += per_row_color
+                else:
+                    sr += (len(i) // per_row_color) + 1
         def tidy_up(widgets, per_row, start_row=0, start_column=0, padx=5, pady=5):
             master = widgets[0].master
             """
