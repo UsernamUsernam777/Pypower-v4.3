@@ -5,7 +5,7 @@ import pyperclip as _pyperclip
 import time as _time
 import webbrowser as _webbrowser
 import os as _os
-import subprocess as _subprocess
+import subprocess as _ubprocess
 class Time:
     @staticmethod
     def minus_clock(time_str1, time_str2):
@@ -13,10 +13,6 @@ class Time:
         t2 = Time.reverse_many_hms(time_str2)
         return Time.how_many_hms_in_s(abs(t1-t2))
     """convert time to type_output"""
-    @staticmethod
-    def convert_to_iterable_and_int(time_str, type_output=tuple):
-        """Convert 'HH:MM:SS' string to an iterable of ints. ex: '01:30:45' -> (1, 30, 45)"""
-        return type_output(map(int, time_str.split(':')))
     @staticmethod
     def how_many_hms_in_s(sec):
         """how many hours, minutes and seconds in seconds"""
@@ -28,11 +24,6 @@ class Time:
     def reverse_many_hms(time_str):
         result = Time.convert_to_iterable_and_int(time_str)
         return (result[0]*3600) + (result[1]*60) + result[2]
-class Other:
-    @staticmethod
-    def search_google(text):
-        """Open a new browser tab with a Google search for text."""
-        _webbrowser.open_new_tab(f"https://www.google.com/search?q={text}&oq=&gs_lcrp=EgZjaHJvbWUqCQgAECMYJxjqAjIJCAAQIxgnGOoCMgkIARAjGCcY6gIyCQgCEEUYOxjCAzIRCAMQABgDGEIYjwEYtAIY6gIyDwgEEC4YAxiPARi0AhjqAjIRCAUQABgDGEIYjwEYtAIY6gIyEQgGEAAYAxhCGI8BGLQCGOoCMg8IBxAuGAMYjwEYtAIY6gLSAQg0MDVqMGoxNagCCLACAfEF1j7Fc7lEloM&sourceid=chrome&ie=UTF-8")
     @staticmethod
     def in_bg(duration, action=None):
         """Run action in a background thread after duration seconds."""
@@ -40,7 +31,7 @@ class Other:
         t.after(duration*1000, action)
 class Apps:
     @staticmethod
-    def create_app(path, icon=None, move_to_folder=None):
+    def create_app(path, icon=None, move_to_folder=None, name=None):
         """Build a standalone .exe from a .py file using PyInstaller, then clean up build files."""
         def mainloop():
             from shutil import rmtree
@@ -55,6 +46,8 @@ class Apps:
                 _os.chdir(pj)
                 if icon:
                     pro.append(f'--icon={icon}')
+                if name:
+                    pro.append(f'--name={name}')
                 p = _subprocess.Popen(pro, creationflags=_subprocess.CREATE_NO_WINDOW)
                 p.wait()
                 if _os.path.exists(_os.path.join('dist', n_exe)):
@@ -72,6 +65,18 @@ class Apps:
                     print(f"App Created Successed in {new}")
         Other.in_bg(1, mainloop)
 class Files:
+    @staticmethod
+    def in_bg(duration, action=None):
+        a = globals()
+        found = False
+        for i in alls:
+            if isinstance(a[i], _ctk.CTk):
+                i.after(duration, action)
+                found = True
+                break
+        if not found:
+            a = _ctk.CTk()
+            a.after(duration, action)
     @staticmethod
     def read_write_txt_file(file_txt, do='read', text=None, create_if_no=False):
         if create_if_no:
@@ -108,6 +113,41 @@ class Files:
             b.write(new_text.replace('\n\n', '\n'))
 class GUI:
     class CustomTk:
+        class Manager:
+            def clear_manager(dic):
+                no = ['width', 'height', 'in', 'relwidth', 'relheight']
+                for n in no:
+                    if n in dic:
+                        dic.pop(n)
+                for i in dic:
+                    if Math.int_or_float(dic[i]):
+                        dic[i] = float(dic[i])
+                return dic
+            def manager_with_data(obj, manager, dic):
+                dic = GUI.CustomTk.Manager.clear_manager(dic)
+                getattr(obj, manager)(**dic)
+            def places_from_file(file, master):
+                Files.make_if_not_exists(file, 'txt')
+                dicts = String(Files.read_write_txt_file(file)).between('{', '}')
+                if dicts:
+                    for i in range(len(dicts)):
+                        dicts[i] = _ast.literal_eval(dicts[i])
+                    for i, e in zip(sorted(GUI.CustomTk.all_objects(master), key=str), dicts):
+                        GUI.CustomTk.Manager.manager_with_data(i, i.winfo_manager(), e)
+            def places_to_file(file, master):
+                cl = GUI.CustomTk.Manager.clear_manager
+                s = ''
+                for i in sorted(GUI.CustomTk.all_objects(master), key=str):
+                    t = i.winfo_manager()
+                    t = cl(getattr(i, f'{t}_info')())
+                    s += str(t) + '\n'
+                Files.read_write_txt_file(file, 'write', s.strip('\n'), True)
+            def manager_same(obj1, obj2):
+                cl = GUI.CustomTk.Manager.clear_manager
+                t = obj1.winfo_manager()
+                if t:
+                    n = cl(getattr(obj1, f'{t}_info')())
+                    getattr(obj2, f'{t}')(**n)
         def copy_style(master, all_objects=True):
             if all_objects:
                 wids = GUI.CustomTk.has_text_iterable(GUI.CustomTk.all_objects(master))
@@ -161,27 +201,10 @@ class GUI:
             def m():
                 l.lift()
                 if side == 'above':
-                    l.place(x=obj.winfo_x(), y=obj.winfo_y()-obj.winfo_height()*2)
+                    l.place(x=obj.winfo_x(), y=obj.winfo_y()-obj.winfo_height())
                 else:
                     l.place(x=obj.winfo_x(), y=obj.winfo_y()+obj.winfo_height())
-            obj.master.after(20, m)
-        def manager_same(obj1, obj2):
-            t = obj1.winfo_manager()
-            if t == 'pack':
-                n = obj1.pack_info()
-                n.pop('in')
-                obj2.pack(**n)
-            elif t == 'place':
-                n = obj1.place_info()
-                for i in ['width', 'height', 'relwidth', 'relheight', 'in']:
-                    n.pop(i)
-                for i in n:
-                    if n[i].isdigit():
-                        n[i] = int(n[i])
-                obj2.place(**n)
-            else:
-                n = obj1.grid_info()
-                obj2.grid(**n)
+            obj.master.after(200, m)
         def entry_label(obj):
             is_label = isinstance(obj, _ctk.CTkLabel)
             event = "<Shift-Double-Button-1>" if is_label else "<Return>"
@@ -289,16 +312,18 @@ class GUI:
             if text_obj:
                 return {'texts': [t.cget('text') for t in result], 'widgets': result}
             return result
-        def show_hide_message(master, message, text_color='red', font=('arial', 30), x=None, y=None, hide_after=1, in_btn=False):    
+        def show_hide_message(master, message, text_color='red', font=('arial', 30), x=None, y=None, show_after=0, hide_after=1, in_btn=False):    
             if in_btn:
                 a = _ctk.CTkButton(master, text=message, font=font, text_color=text_color, hover=False, )
             else:
                 a = _ctk.CTkLabel(master, text=message, font=font, text_color=text_color)
-            if x and y:
-                a.place(x=x, y=y)
-            else:
-                a.pack()
-            a.after(int(hide_after*1000), a.destroy)
+            def s():
+                if x and y:
+                    a.place(x=x, y=y)
+                else:
+                    a.pack()
+                a.after(int(hide_after*1000), a.destroy)
+            a.after(int(show_after*1000), s)
             return a
         def change_mode(master, light_icon='light', dark_icon='dark'):
             def c():
@@ -337,25 +362,28 @@ class GUI:
                 return {'frame': result, 'buttons': buttons}
             return result
         class Timer:
-            def __init__(self, duration, obj, start_icon='start', stop_icon='stop', when_finish=None):
+            def __init__(self, duration, obj, start_icon='start', stop_icon='stop', while_resume=None, when_finish=None):
                 self.duration = duration
                 self.resume = self.duration > 0
                 self.obj = obj
+                self.obj.configure(text=Time.how_many_hms_in_s(self.duration))
                 self.button = _ctk.CTkButton(obj.master, text=start_icon, command=self.start)
                 self.start_icon = start_icon
                 self.stop_icon = stop_icon
                 self.timers = 0
+                self.while_resume = while_resume
                 self.when_finish = when_finish
             def start(self):
-                if self.resume and self.duration > 0:
+                if self.resume:
                     self.button.configure(command=self.stop, text=self.stop_icon)
                     self.duration -= 1
                     self.obj.configure(text=Time.how_many_hms_in_s(self.duration))
-                    
+                    if self.while_resume:
+                        self.while_resume()
                     if self.duration == 0:
                         if self.when_finish:
+                            self.button.configure(text=self.start_icon)
                             self.when_finish()
-                            self.button.configure(text=self.start_icon, command=self.start)
                     else:
                         self.obj.after(1000, self.start)
             def stop(self):
@@ -641,6 +669,13 @@ result = ['Olivia', 'mark']"""
             return set(iterable).issubset(set(main_iterable))
     @staticmethod
     class Dict:
+        def multy_key(dic):
+            result = {}
+            values = set(dic.values())
+            for i in values:
+                keys = [o for o in dic if dic[o] == i]
+                result[str(keys)] = i
+            return result
         def swap_dict(dic):
             """k: v ➡ v, k"""
             result = {}
