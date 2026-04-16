@@ -18,18 +18,22 @@ class CustomTk:
                         new.clear()
                         in_mode = False
             for i in widgets:
-                i.bind(sequence, fi)
+                i.bind(sequence, fi)     
         return _ctk.CTkButton(widgets[0].master, text=text_button, command=alls)
     def chart(master, values, with_labels=False, width=50, color='blue', corner_radius=0, orientation='vertical'):
-        frame = _ctk.CTkScrollableFrame(master, orientation=orientation)
-        data = [_ctk.CTkFrame(frame, fg_color=color, height=i * 2, width=width, corner_radius=corner_radius) for i in values]
-        if with_labels:
-            for d in range(len(data)):
-                CustomTk.label_widget(data[d], values[d], 'above', value=30, font=('arial', 20))
-        CustomTk.tidy_up(data, len(data), pady=30)
-        master.update()
-        frame.configure(width=frame.winfo_reqwidth(), height=frame.winfo_reqheight())
-        return frame
+        values = [i for i in values if i != 0 and isinstance(i, (int, float))]
+        if values:
+            frame = _ctk.CTkScrollableFrame(master, orientation=orientation)
+            data = [_ctk.CTkFrame(frame, fg_color=color, height=((i / sum(values))*100)+2, width=width, corner_radius=corner_radius) for i in values if i > 0]
+            CustomTk.tidy_up(data, len(data), start_row=0)
+            frame.update()
+            if with_labels:
+                labels = []
+                for i in range(len(data)):
+                    labels.append(_ctk.CTkLabel(frame, text=values[i], font=('arial', 20)))
+                CustomTk.tidy_up(labels, len(labels), start_row=1)
+            frame.configure(width=frame.winfo_reqwidth(), height=frame.winfo_reqheight())
+            return frame
     def history_binds(obj):
         old_func = obj.bind
         def bind(sequence=None, command=None, add=True):
@@ -135,12 +139,13 @@ class CustomTk:
         return label
     def label_widget(obj, message, side='above', value=0, text_color='black', font=('arial', 10), fg_color=None):
         l = _ctk.CTkLabel(obj.master, text=message, text_color=text_color, font=font, fg_color=fg_color)
+        obj.master.update()
         def m():
             l.lift()
             if side == 'above':
-                l.place(x=obj.winfo_x(), y=obj.winfo_y()-obj.winfo_height())
+                l.place(x=obj.winfo_x(), y=obj.winfo_y()-obj.winfo_height()-value)
             else:
-                l.place(x=obj.winfo_x(), y=obj.winfo_y()+obj.winfo_height())
+                l.place(x=obj.winfo_x(), y=obj.winfo_y()+obj.winfo_height()+value)
         obj.master.after(200, m)
     def entry_label(obj):
         is_label = isinstance(obj, _ctk.CTkLabel)
@@ -203,6 +208,8 @@ class CustomTk:
                 CustomTk.good_size(col)
             if widgets_frame:
                 widgets.extend(col)
+        a.update()
+        a.configure(width=a.winfo_reqwidth(), height=a.winfo_reqheight())
         if widgets_frame:
             return {'widgets': widgets, 'frame': a}
         return a
@@ -385,49 +392,43 @@ class CustomTk:
             for i in widgets:
                 i.configure(width=max(width), height=max(height))
         widgets[0].after(100, m)
-    def sort_colors(widgets, per_row_color, start_col=0, start_row=0, color_of='fg_color', orientation='vertical'):
-        sc = start_col
-        sr = start_row
-        colors = set()
-        for i in widgets:
-            v = i.cget(color_of)
-            if isinstance(v, list):
-                colors.add(v[0])
-            else:
-                colors.add(v)
+    def sort_types(widgets, per_row, start_col=0, start_row=0, type_of='fg_color', orientation='vertical', leave_space=0):
+        types = sorted({str(i.cget(type_of)) for i in widgets
+                        if not _Math.int_or_float(i.cget(type_of))})
+        types_num = sorted({i.cget(type_of)
+                            for i in widgets if _Math.int_or_float(i.cget(type_of))}, key=float)
+        types = types + types_num
         wids = []
-        for i in colors:
+        for i in types:
             new = []
             for o in widgets:
-                if o.cget(color_of) == i:
+                if str(o.cget(type_of)) == i:
                     new.append(o)
-            wids.append(new)
+            if new:
+                wids.append(new)
+        widgets[0].master.update()
         for i in wids:
-            CustomTk.tidy_up(i, per_row_color, start_row=sr, start_column=sc)
+            CustomTk.tidy_up(i, per_row, start_column=start_col, start_row=start_row)
             if orientation == 'horizontal':
-                sc += per_row_color
+                start_col = int(i[-1].grid_info()['column']) + 1 + leave_space
             else:
-                sr += (len(i) // per_row_color) + 1
+                start_row = int(i[-1].grid_info()['row']) + 1 + leave_space
     def tidy_up(widgets, per_row, start_row=0, start_column=0, padx=5, pady=5):
         master = widgets[0].master
         """
         Arrange widgets in a grid with a fixed number per row.
         """
+        c = start_column
         for i in range(start_row):
             master.grid_rowconfigure(i, minsize=widgets[0].winfo_reqheight())
         for i in range(start_column):
             master.grid_columnconfigure(i, minsize=widgets[0].winfo_reqwidth())
-        columns = start_column
-        rows = start_row
-        allowed_num = 0
-        multy = range(per_row, len(widgets)+1, per_row)
-        for w in widgets:
-            w.grid(column=columns, row=rows, padx=padx, pady=pady)
-            allowed_num += 1
-            columns += 1
-            if allowed_num in multy:
-                rows += 1
-                columns = start_column
+        for i in widgets:
+            i.grid(row=start_row, column=c, padx=padx, pady=pady)
+            c += 1
+            if c % per_row == 0:
+                start_row += 1
+                c = start_column
     def all_objects(master):
         """Return a flat list of all child widgets in master."""
         result = []
